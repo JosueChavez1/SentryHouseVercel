@@ -1,40 +1,49 @@
-import mysql from 'mysql2/promise'
+const mongoose = require('mongoose');
+require('dotenv').config();
 
-let ultimoValor = { valor: 0 }
+const uri = process.env.MONGODB_URI;
 
-const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
+if (!uri) {
+    throw new Error('❌ MONGODB_URI no está definida');
 }
 
-export default async function handler(req, res) {
-    if (req.method === "POST") {
-        const { valor } = req.body
-        if (valor !== undefined) {
-            ultimoValor.valor = valor
+let isConnected = false;
+async function connectDB() {
+    if (isConnected) return;
+    await mongoose.connect(uri);
+    isConnected = true;
+}
 
-            try {
-                const connection = await mysql.createConnection(dbConfig)
-                const fecha = new Date().toISOString().slice(0, 19).replace("T", " ")
-                await connection.execute(
-                    "INSERT INTO registros_gas (valor, fecha) VALUES (?, ?)", [valor, fecha]
-                )
-                await connection.end()
-                return res.status(200).json({ estado: "ok" })
-            } catch (error) {
-                console.error("Error DB:", error)
-                return res.status(500).json({ estado: "error", mensaje: "DB error" })
-            }
-        } else {
-            return res.status(400).json({ estado: "error", mensaje: "Dato no recibido" })
+const LecturaSchema = new mongoose.Schema({
+    valor: Number,
+    fecha: { type: Date, default: Date.now }
+});
+
+const Lectura = mongoose.models.Lectura || mongoose.model('Lectura', LecturaSchema);
+
+module.exports = async(req, res) => {
+    try {
+        await connectDB();
+
+        if (req.method === 'GET') {
+            const lectura = await Lectura.findOne().sort({ fecha: -1 });
+            return res.status(200).json(lectura || { valor: 0 });
         }
-    }
 
-    if (req.method === "GET") {
-        return res.status(200).json(ultimoValor)
-    }
+        if (req.method === 'POST') {
+            const body = req.body;
+            if (!body || typeof body.valor !== 'number') {
+                return res.status(400).json({ error: 'Falta o valor incorrecto en el cuerpo' });
+            }
 
-    return res.status(405).json({ error: "Método no permitido" })
-}
+            const nueva = new Lectura({ valor: body.valor });
+            await nueva.save();
+            return res.status(201).json(nueva);
+        }
+
+        return res.status(405).json({ error: 'Método no permitido' });
+    } catch (error) {
+        console.error('❌ Error en función API:', error);
+        return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};

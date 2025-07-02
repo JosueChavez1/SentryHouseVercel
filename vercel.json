@@ -4,6 +4,6 @@
         { "src": "api/gas.js", "use": "@vercel/node" }
     ],
     "routes": [
-        { "src": "/api/gas", "dest": "/api/gas.js" }
+        { "src": "/api/gas", "methods": ["GET", "POST"], "dest": "api/gas.js" }
     ]
 }
