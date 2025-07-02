@@ -4,7 +4,7 @@ let ultimoValor = { valor: 0 }
 
 // Credenciales de conexión (usa variables de entorno en producción)
 const dbConfig = {
-    host: 'localhost',
+    host: '127.0.0.1:3306',
     user: 'Josue',
     password: 'password',
     database: 'SentryHosueGas'
