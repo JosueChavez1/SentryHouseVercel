@@ -1,9 +1,11 @@
 {
     "version": 2,
     "builds": [
-        { "src": "api/gas.js", "use": "@vercel/node" }
+        { "src": "api/gas.js", "use": "@vercel/node" },
+        { "src": "api/gasCocina.js", "use": "@vercel/node" }
     ],
     "routes": [
-        { "src": "/api/gas", "methods": ["GET", "POST"], "dest": "api/gas.js" }
+        { "src": "/api/gas", "dest": "api/gas.js" },
+        { "src": "/api/gasCocina", "dest": "api/gasCocina.js" }
     ]
 }

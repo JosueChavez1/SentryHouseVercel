@@ -1,4 +1,3 @@
-// models/GasLectura.js
 const mongoose = require('mongoose');
 
 const GasLecturaSchema = new mongoose.Schema({
