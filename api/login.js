@@ -1,31 +1,23 @@
-// api/login.js
-const express = require('express');
-const router = express.Router();
-const { MongoClient } = require('mongodb');
-require('dotenv').config();
+const mongoose = require('mongoose');
+const Usuario = require('../models/Usuario'); // Asegúrate de tener este modelo
+mongoose.connect(process.env.MONGODB_URI);
 
-const uri = process.env.MONGO_URI;
-const client = new MongoClient(uri);
-const dbName = 'sentryhouse';
+module.exports = async(req, res) => {
+    if (req.method !== 'POST') return res.status(405).send('Método no permitido');
 
-router.post('/login', async(req, res) => {
     const { correo, contrasena } = req.body;
+
     try {
-        await client.connect();
-        const db = client.db(dbName);
-        const collection = db.collection('usuario_app');
+        const usuario = await Usuario.findOne({ correo, contrasena });
 
-        const usuario = await collection.findOne({ correo, contrasena });
+        if (!usuario) return res.status(401).json({ mensaje: 'Credenciales incorrectas' });
 
-        if (usuario) {
-            res.status(200).json({ success: true, usuarioId: usuario._id });
-        } else {
-            res.status(401).json({ success: false, message: 'Credenciales incorrectas' });
-        }
+        res.status(200).json({
+            id: usuario._id,
+            correo: usuario.correo,
+            cotizacionId: usuario.cotizacionId
+        });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, message: 'Error del servidor' });
+        res.status(500).json({ mensaje: 'Error en el servidor', error: err.message });
     }
-});
-
-module.exports = router;
+};
