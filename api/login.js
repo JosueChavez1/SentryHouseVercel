@@ -1,5 +1,38 @@
 const mongoose = require('mongoose');
-const UsuarioApp = require('../models/UsuarioApp');
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+    throw new Error('Por favor define la variable de entorno MONGODB_URI');
+}
+
+let cached = global.mongoose;
+
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
+async function connectToDatabase() {
+    if (cached.conn) {
+        return cached.conn;
+    }
+    if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGODB_URI).then(mongoose => {
+            return mongoose;
+        });
+    }
+    cached.conn = await cached.promise;
+    return cached.conn;
+}
+
+const usuarioAppSchema = new mongoose.Schema({
+    correo: String,
+    contrasena: String,
+    cotizacionId: Number,
+    fechaCreacion: Date
+}, { collection: 'usuario_app' });
+
+const UsuarioApp = mongoose.models.UsuarioApp || mongoose.model('UsuarioApp', usuarioAppSchema);
 
 module.exports = async(req, res) => {
     if (req.method !== 'POST') {
@@ -7,9 +40,7 @@ module.exports = async(req, res) => {
     }
 
     try {
-        if (mongoose.connection.readyState !== 1) {
-            await mongoose.connect(process.env.MONGODB_URI);
-        }
+        await connectToDatabase();
 
         const { correo, contrasena } = req.body;
 
@@ -19,7 +50,7 @@ module.exports = async(req, res) => {
             return res.status(401).json({ mensaje: 'Credenciales incorrectas' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             id: usuario._id,
             correo: usuario.correo,
             cotizacionId: usuario.cotizacionId || null
